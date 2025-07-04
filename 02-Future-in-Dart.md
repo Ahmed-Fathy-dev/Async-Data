@@ -161,3 +161,41 @@ Future<void> main() async {
 | `Future.microtask()` | تنفذ كود سريع بأولوية عالية        |
 | `Future.wait([])`    | تستنى مجموعة Futures وتجمع نتايجهم |
 
+## من ضمن الميثودز برده اللى بنستخدمها هى then, catchError, whenComplete في Future
+
+ودي تعتبر أدوات التحكم في نتيجة الـ Future لما تجهز، سواء نجحت أو فشلت
+
+في بعض الأحيان، مش بتستخدم `await` لكن بتفضل تشتغل بـ `.then()` و `.catchError()` و `.whenComplete()` علي حسب برده ال case اللى معاك
+
+من خلالهم تقدر تتعامل مع النتيجة أو الخطأ أو أي حالة بعد انتهاء الـ Future
+
+---
+
+## نبدأ ب then()
+
+الميثود `then()` بتشتغل لما الـ Future **ينجح**، وبتاخد النتيجة وتشتغل بيها.
+
+```dart
+Future<String> getName() {
+  return Future.delayed(Duration(seconds: 1), () => 'Ahmed');
+}
+
+void main() {
+  getName().then((name) {
+    print('الاسم هو $name');
+  });
+}
+```
+
+تقدر كمان تعمل "سلسلة" (Chaining) من الـ then() واحدة ورا التانية
+```dart
+Future<int> doubleNumber(int n) {
+  return Future.value(n * 2);
+}
+
+void main() {
+  Future.value(5)
+      .then((value) => doubleNumber(value))
+      .then((result) => print('النتيجة: $result'));
+}
+```
