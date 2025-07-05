@@ -199,3 +199,154 @@ void main() {
       .then((result) => print('النتيجة: $result'));
 }
 ```
+
+## ال  catchError()
+الميثود دي بتتعامل مع أي خطأ يحصل داخل الـ Future، بديل لاستخدام try/catch مع await.
+```dart
+Future<void> throwError() {
+  return Future.error('فيه مشكلة!');
+}
+
+void main() {
+  throwError()
+    .then((_) => print('مش هيوصل هنا'))
+    .catchError((e) => print('اتمسك الخطأ: $e'));
+}
+```
+ملحوظة: catchError مش هتشوف الخطأ لو حصل في then() تانية بعدين.
+في الحالة دي لازم تمسك الخطأ عند آخر نقطة حصل فيها
+
+## ال whenComplete() 
+الميثود دي بتتنفذ في كل الحالات:
+
+سواء الـ Future نجح أو فشل
+
+ودي مفيدة لما تحب تعمل تنظيف أو إنهاء معين دايمًا زى:
+```dart
+Future<void> saveFile() {
+  return Future.delayed(Duration(seconds: 1), () => throw 'فشل في الحفظ');
+}
+
+void main() {
+  saveFile()
+    .then((_) => print('تم الحفظ'))
+    .catchError((e) => print('خطأ: $e'))
+    .whenComplete(() => print('خلصنا العملية'));
+}
+```
+
+الناتج 
+```markfile
+خطأ: فشل في الحفظ
+خلصنا العملية
+```
+##  مقارنة سريعة
+| الميثود          | بتشتغل لما؟                 | الهدف                    |
+| ---------------- | --------------------------- | ------------------------ |
+| `then()`         | لما Future ينجح             | تتعامل مع النتيجة        |
+| `catchError()`   | لما Future يفشل             | تمسك وتتعامل مع الخطأ    |
+| `whenComplete()` | في كل الحالات (نجاح أو فشل) | تنظيف أو تنفيذ أكشن أخير |
+
+# ميثودز متقدمة في ال Future :
+# هما timeout, any, forEach, doWhile
+
+لغة Dart بتوفر ميثودز للتعامل مع Futures بشكل مرن خصوصًا لو بتتعامل مع قوائم أو عندك أكتر من احتمال أو عايز تحط مهلة زمنية
+
+---
+
+## أولا : Future.timeout()
+
+الميثود دي بتسمحلك تحدد وقت معين لو الـ Future مخلصش فيه → يحصل Error أو تنفذ حاجة بديلة
+
+```dart
+Future<String> getData() {
+  return Future.delayed(Duration(seconds: 5), () => 'Data جاهزة');
+}
+
+void main() {
+  getData()
+    .timeout(Duration(seconds: 2), onTimeout: () {
+      return 'مهلة انتهت';
+    })
+    .then(print);
+}
+```
+الناتج
+```markfile
+مهلة انتهت
+```
+مهمة جدًا لو بتتعامل مع API بطيء أو مثلا عمليات I/O (Input/Output) وما شابه
+
+
+## ثانيا :  Future.any()
+بتاخد List من Futures وترجع أول واحدة تخلص (سواء نجحت أو فشلت)
+```dart
+void main() async {
+  final result = await Future.any([
+    Future.delayed(Duration(seconds: 3), () => 'أحمد'),
+    Future.delayed(Duration(seconds: 1), () => 'مالك'),
+    Future.delayed(Duration(seconds: 2), () => 'زين'),
+  ]);
+
+  print(result); // مالك
+}
+```
+مفيدة مثلا لو عندك مصادر متعددة وعايز أول استجابة فقط
+
+### ثالثا : Future.forEach()
+دي بتخليك تطبق عملية async على كل عنصر في List بشكل تسلسلي (واحد واحد مش كلهم مع بعض)
+```dart
+Future<void> processItems(List<String> items) async {
+  await Future.forEach(items, (item) async {
+    await Future.delayed(Duration(seconds: 1));
+    print('تمت معالجة: $item');
+  });
+}
+
+void main() {
+  processItems(['تفاحة', 'موز', 'برتقال']);
+}
+```
+الناتج 
+```markfile
+تمت معالجة: تفاحة
+تمت معالجة: موز
+تمت معالجة: برتقال
+```
+لو عايز تنفذهم كلهم في نفس الوقت استخدم Future.wait
+
+## رابعا : async do-while loop (أو while loop مع Future)
+لو عندك شرط معين وبتحتاج تنفذ عملية async كل مرة لحد ما الشرط يتغير
+```dart
+Future<void> repeatUntilFalse() async {
+  int counter = 0;
+
+  do {
+    print('تشغيل رقم $counter');
+    await Future.delayed(Duration(seconds: 1));
+    counter++;
+  } while (counter < 3);
+}
+
+void main() {
+  repeatUntilFalse();
+}
+```
+
+الناتج 
+```markfile
+تشغيل رقم 0
+تشغيل رقم 1
+تشغيل رقم 2
+```
+
+تقدر تستخدم while, for, أو do-while عادي مع await
+
+##  مقارنة سريعة:
+| الميثود     | الوظيفة                                    |
+| ----------- | ------------------------------------------ |
+| `timeout()` | ينهي الـ Future لو تجاوز وقت معين          |
+| `any()`     | يرجع أول Future يخلص من List               |
+| `forEach()` | ينفذ دالة async لكل عنصر بالتسلسل          |
+| `doWhile()` | يكرر async operation لحد ما شرط معين يتحقق |
+
